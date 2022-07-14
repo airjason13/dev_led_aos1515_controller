@@ -862,14 +862,10 @@ void ep1_out_handler(uint8_t *buf, uint16_t len) {
                 rgb_buf_read_idx = rgb_buf_write_idx - 1;
             }
             force_refresh = 1;
-            /*if(rgb_buf_write_idx == 0){
-                rgb_buf_write_idx = 1;
-            }else{
-                rgb_buf_write_idx = 0;
-            }*/
             //sem_release(&led_frame_sem);
             critical_section_exit(&c_s);
         } 
+        //printf("got color buf\n");
         memcpy((led_rgb_buf[rgb_buf_write_idx][panel_id]), buf + 4, len - 4 );
         data_offset += len-4; 
     }else{
@@ -890,6 +886,7 @@ int main(void) {
 	int n, m, l;
     //int force_refresh = 1;
     int pre_rgb_buf_idx = -1;
+    int color_upscale_factor = 256;
     uint16_t r_value, g_value, b_value;
     stdio_init_all();
     printf("USB Device Low-Level hardware example\n");
@@ -939,27 +936,14 @@ int main(void) {
         //tight_loop_contents(); //marked this busy loop
 	    //test pattern
         int output = 0;
-        //sem_acquire_blocking(&led_frame_sem);
         critical_section_enter_blocking(&c_s);
-        /*if(rgb_buf_write_idx == 0){
-            rgb_buf_read_idx = 1;
-        }else{
-            rgb_buf_read_idx = 0;
-        }*/
-        b_color_test_mode = true;
+        //b_color_test_mode = true;
         if(b_color_test_mode == true){
             output = 1;
         }else{
             output = force_refresh;
         }
         critical_section_exit(&c_s);
-        //sem_release(&led_frame_sem);
-        /*if(pre_rgb_buf_idx != rgb_buf_read_idx){
-            pre_rgb_buf_idx = rgb_buf_read_idx;
-            force_refresh = 1;
-        }else{
-            force_refresh = 0;
-        }*/
         if(output == 0){
 	        sleep_ms(3);
             //critical_section_exit(&c_s);
@@ -979,12 +963,27 @@ int main(void) {
                         }else{
                             pattern = 0x000000;
                         }
-                        //printf("pattern : 0x%x\n", pattern);             
+                        printf("pattern : 0x%x\n", pattern);             
                         put_pixel_by_panel(n, pattern);*/
-                        r_value = led_rgb_buf[rgb_buf_read_idx][n][(j*k*COLOR_CHANNEL) + (0)];
-                        g_value = (led_rgb_buf[rgb_buf_read_idx][n][(j*k*COLOR_CHANNEL) + 1]);
-                        b_value = ((led_rgb_buf[rgb_buf_read_idx][n][(j*k*COLOR_CHANNEL) + 2]));
-                        if((0 <= j )&& (j < 6)){
+                        r_value = led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + (0)];
+                        g_value = (led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + 1]);
+                        b_value = ((led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + 2]));
+                        r_value = r_value * color_upscale_factor;
+                        if(r_value > 0xffff){
+                            r_value = 0xffff;
+                        }
+                        g_value = g_value * color_upscale_factor;
+                        if(g_value > 0xffff){
+                            g_value = 0xffff;
+                        }
+                        b_value = b_value * color_upscale_factor;
+                        if(b_value > 0xffff){
+                            b_value = 0xffff;
+                        }
+                        
+                        
+                        //printf("rgb : 0x%x, 0x%x, 0x%x\n", r_value, g_value, b_value);             
+                        /*if((0 <= j )&& (j < 6)){
                             r_value = 0xffff;
                             g_value = 0x00;
                             b_value = 0x00;
@@ -1002,7 +1001,7 @@ int main(void) {
                             r_value = 0xff00;
                             g_value = 0xff00;
                             b_value = 0xff00; 
-                        }
+                        }*/
                         color_msb = ((g_value & 0x0000ffff) << 8) | ((b_value >> 8) & 0x0000ffff);
                         color_lsb = ((b_value & 0x000000ff) << 16) | r_value;
                         put_pixel_by_panel_64bits(n, color_msb, color_lsb);
@@ -1016,9 +1015,7 @@ int main(void) {
         force_refresh = 0;
         critical_section_exit(&c_s);
         //printf("Apattern : 0x%x\n", pattern);             
-	    //sleep_ms(10); //ori
 	    sleep_ms(3);
-	    //sleep_ms(30);
     }
 
     return 0;
