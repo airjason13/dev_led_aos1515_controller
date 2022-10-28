@@ -850,7 +850,7 @@ void ep1_out_handler(uint8_t *buf, uint16_t len) {
     }else if((res >= 0)&&(res <=7)){
         if( res == 0){
             //sem_acquire_blocking(&led_frame_sem);
-            critical_section_enter_blocking(&c_s);
+            //critical_section_enter_blocking(&c_s);
             if(rgb_buf_write_idx == 2){
                 rgb_buf_write_idx = 0; 
             }else{
@@ -863,7 +863,7 @@ void ep1_out_handler(uint8_t *buf, uint16_t len) {
             }
             force_refresh = 1;
             //sem_release(&led_frame_sem);
-            critical_section_exit(&c_s);
+            //critical_section_exit(&c_s);
         } 
         //printf("got color buf\n");
         memcpy((led_rgb_buf[rgb_buf_write_idx][panel_id]), buf + 4, len - 4 );
@@ -899,7 +899,7 @@ int main(void) {
     //set_sys_clock_khz(2500000, false);
 
     //sem_init(&led_frame_sem, 1, 1);
-    critical_section_init(&c_s);
+    //critical_section_init(&c_s);
 
 
 
@@ -936,14 +936,14 @@ int main(void) {
         //tight_loop_contents(); //marked this busy loop
 	    //test pattern
         int output = 0;
-        critical_section_enter_blocking(&c_s);
+        //critical_section_enter_blocking(&c_s);
         //b_color_test_mode = true;
         if(b_color_test_mode == true){
             output = 1;
         }else{
             output = force_refresh;
         }
-        critical_section_exit(&c_s);
+        //critical_section_exit(&c_s);
         if(output == 0){
 	        sleep_ms(3);
             //critical_section_exit(&c_s);
@@ -1011,11 +1011,11 @@ int main(void) {
 	        }
 	    }
         //sem_release(&led_frame_sem);
-        critical_section_enter_blocking(&c_s);
+        //critical_section_enter_blocking(&c_s);
         force_refresh = 0;
-        critical_section_exit(&c_s);
+        //critical_section_exit(&c_s);
         //printf("Apattern : 0x%x\n", pattern);             
-	    sleep_ms(3);
+	    sleep_ms(1);
     }
 
     return 0;

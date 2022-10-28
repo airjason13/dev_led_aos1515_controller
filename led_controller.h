@@ -1,7 +1,7 @@
 #ifndef _LED_CONTROLLER_H_
 #define _LED_CONTROLLER_H_
 
-#define VERSION                 "LM20211123_002A"
+#define VERSION                 "LM20221025_001A"
 
 #define LED_PANEL_COUNT         8   //1 pico with 8 port
 #define COLOR_CHANNEL           3   //RGB channel

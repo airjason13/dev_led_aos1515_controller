@@ -9,7 +9,7 @@
 
 
 ;T0H=250ns, T1H=500ns
-.define public T1 4
+.define public T1 5
 .define public T2 20
 .define public T3 4 
 .define public T4 4

@@ -15,7 +15,7 @@
 #define ws2812_wrap_target 0
 #define ws2812_wrap 3
 
-#define ws2812_T1 4
+#define ws2812_T1 5
 #define ws2812_T2 20
 #define ws2812_T3 4
 #define ws2812_T4 4
@@ -24,7 +24,7 @@
 static const uint16_t ws2812_program_instructions[] = {
             //     .wrap_target
     0x6321, //  0: out    x, 1            side 0 [3] 
-    0x1323, //  1: jmp    !x, 3           side 1 [3] 
+    0x1423, //  1: jmp    !x, 3           side 1 [4] 
     0x1300, //  2: jmp    0               side 1 [3] 
     0xa342, //  3: nop                    side 0 [3] 
             //     .wrap
