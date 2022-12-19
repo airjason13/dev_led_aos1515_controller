@@ -42,9 +42,11 @@
 
 //struct semaphore led_frame_sem;
 critical_section_t c_s;
-int force_refresh = 1;
+//int force_refresh = 1;
+int force_refresh = 0;
 uint32_t test_pattern = COLOR_WHITE;
-bool b_color_test_mode = 0;
+bool b_color_test_mode = 0;//for test app
+bool b_rgb_test_mode = 0;//self test RGB pattern
 int width_interval = 0;
 int height_interval = 0;
 int LED_WIDTH = 40;
@@ -923,11 +925,54 @@ int main(void) {
 			    }if((m%3) == 2){                 //blue
 				    led_rgb_buf[l][n][m] = 0x00;
 			    }if((m%3) == 1){                 //green
-				    led_rgb_buf[l][n][m] = 0xf0;
+				    led_rgb_buf[l][n][m] = 0x40;
 			    }
 		    }
 	    }
     }
+    
+	for(int j = 0; j < 1; j++){
+	    for(int k = 0; k < 1; k++){
+            for(n = 0; n < LED_PANEL_COUNT; n ++){
+                        
+                r_value = led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + (0)];
+                g_value = (led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + 1]);
+                b_value = ((led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + 2]));
+                r_value = r_value * color_upscale_factor;
+                if(r_value > 0xffff){
+                    r_value = 0xffff;
+                }
+                g_value = g_value * color_upscale_factor;
+                if(g_value > 0xffff){
+                    g_value = 0xffff;
+                }
+                b_value = b_value * color_upscale_factor;
+                if(b_value > 0xffff){
+                    b_value = 0xffff;
+                }
+                        
+                        
+                color_msb = ((g_value & 0x0000ffff) << 8) | ((b_value >> 8) & 0x0000ffff);
+                color_lsb = ((b_value & 0x000000ff) << 16) | r_value;
+                put_pixel_by_panel_64bits(n, color_msb, color_lsb);
+           }
+	   }
+    }
+    for(l = 0; l < 3; l ++ ){
+        for(n = 0; n < LED_PANEL_COUNT; n++){
+		    for(m = 0; m < (LED_WIDTH*LED_HEIGHT*COLOR_CHANNEL); m++ ){
+			    if((m%3) == 0){               //red
+				    led_rgb_buf[l][n][m] = 0x00;
+			    }if((m%3) == 2){                 //blue
+				    led_rgb_buf[l][n][m] = 0x00;
+			    }if((m%3) == 1){                 //green
+				    led_rgb_buf[l][n][m] = 0x00;
+			    }
+		    }
+	    }
+    }
+    
+
     // Get ready to rx from host
     usb_start_transfer(usb_get_endpoint_configuration(EP1_OUT_ADDR), NULL, 64);
 
@@ -953,18 +998,8 @@ int main(void) {
         }
 	    for(int j = 0; j < LED_HEIGHT; j++){
 	        for(int k = 0; k < LED_WIDTH; k++){
-	           //for(int i = 0; i < COLOR_CHANNEL; i++){
                     for(n = 0; n < LED_PANEL_COUNT; n ++){
                         
-                        //if((i % height_interval == 0)&&(j % width_interval == 0)){
-                        /*pattern = (led_rgb_buf[rgb_buf_read_idx][n][(j*LED_WIDTH*COLOR_CHANNEL) + (i*COLOR_CHANNEL)]  << 8 )+  
-                                ((led_rgb_buf[rgb_buf_read_idx][n][(j*LED_WIDTH*COLOR_CHANNEL) + (i*COLOR_CHANNEL) + 1]) << 16) +
-                                ((led_rgb_buf[rgb_buf_read_idx][n][(j*LED_WIDTH*COLOR_CHANNEL) + (i*COLOR_CHANNEL) + 2]));
-                        }else{
-                            pattern = 0x000000;
-                        }
-                        printf("pattern : 0x%x\n", pattern);             
-                        put_pixel_by_panel(n, pattern);*/
                         r_value = led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + (0)];
                         g_value = (led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + 1]);
                         b_value = ((led_rgb_buf[rgb_buf_read_idx][n][(((j*LED_WIDTH) + k)*COLOR_CHANNEL) + 2]));
@@ -982,32 +1017,10 @@ int main(void) {
                         }
                         
                         
-                        //printf("rgb : 0x%x, 0x%x, 0x%x\n", r_value, g_value, b_value);             
-                        /*if((0 <= j )&& (j < 6)){
-                            r_value = 0xffff;
-                            g_value = 0x00;
-                            b_value = 0x00;
-                        }else if((6 <= j) &&(j < 12)){
-                            r_value = 0x00;
-                            g_value = 0xffff;
-                            b_value = 0x00;
-                        
-                        }else if((12 <= j) &&(j < 18)){
-                            r_value = 0x00;
-                            g_value = 0x00;
-                            b_value = 0xffff;
-                        
-                        }else{
-                            r_value = 0xff00;
-                            g_value = 0xff00;
-                            b_value = 0xff00; 
-                        }*/
                         color_msb = ((g_value & 0x0000ffff) << 8) | ((b_value >> 8) & 0x0000ffff);
                         color_lsb = ((b_value & 0x000000ff) << 16) | r_value;
                         put_pixel_by_panel_64bits(n, color_msb, color_lsb);
-                        //}
                     }
-                //}
 	        }
 	    }
         //sem_release(&led_frame_sem);
