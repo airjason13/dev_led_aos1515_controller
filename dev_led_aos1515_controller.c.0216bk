@@ -859,34 +859,31 @@ void ep1_out_handler(uint8_t *buf, uint16_t len) {
         data_offset += len; 
     }else if((res >= 0)&&(res <=7)){
         if( res == 0){
-            if(rgb_buf_write_idx == 3){
+            //sem_acquire_blocking(&led_frame_sem);
+#if WITH_CRITICAL_SECTION
+            critical_section_enter_blocking(&c_s);
+#endif
+#if 1
+            if(rgb_buf_write_idx == 2){
                 rgb_buf_write_idx = 0; 
             }else{
                 rgb_buf_write_idx ++;
             }
-            /*if(rgb_buf_write_idx == 0){
-                rgb_buf_read_idx = 3;
-            }else{
-                rgb_buf_read_idx = rgb_buf_write_idx - 1;
-            }*/
-        } 
-        //printf("got color buf\n");
-        memcpy((led_rgb_buf[rgb_buf_write_idx][panel_id]), buf + 4, len - 4 );
-        data_offset += len-4;
-        if( res == 7){
-#if WITH_CRITICAL_SECTION
-            critical_section_enter_blocking(&c_s);
-#endif
             if(rgb_buf_write_idx == 0){
-                rgb_buf_read_idx = 3;
+                rgb_buf_read_idx = 2;
             }else{
                 rgb_buf_read_idx = rgb_buf_write_idx - 1;
             }
+#endif
             force_refresh += 1;
+            //printf("%d\n", res);
 #if WITH_CRITICAL_SECTION
             critical_section_exit(&c_s);
 #endif
         } 
+        //printf("got color buf\n");
+        memcpy((led_rgb_buf[rgb_buf_write_idx][panel_id]), buf + 4, len - 4 );
+        data_offset += len-4; 
     }else{
         //printf("buf : %s!\n", buf);
     }
@@ -1054,12 +1051,11 @@ int main(void) {
         }else{
             force_refresh --;
         }
-        printf("%d\n", force_refresh);
 #if WITH_CRITICAL_SECTION
         critical_section_exit(&c_s);
 #endif
         //printf("Apattern : 0x%x\n", pattern);             
-	    sleep_ms(1);
+	    sleep_ms(3);
         //}
     }
     return 0;

@@ -40,12 +40,8 @@
 #define usb_hw_set hw_set_alias(usb_hw)
 #define usb_hw_clear hw_clear_alias(usb_hw)
 
-#define WITH_CRITICAL_SECTION   1
 //struct semaphore led_frame_sem;
-#if WITH_CRITICAL_SECTION
 critical_section_t c_s;
-#endif
-
 //int force_refresh = 1;
 int force_refresh = 0;
 uint32_t test_pattern = COLOR_WHITE;
@@ -859,34 +855,25 @@ void ep1_out_handler(uint8_t *buf, uint16_t len) {
         data_offset += len; 
     }else if((res >= 0)&&(res <=7)){
         if( res == 0){
-            if(rgb_buf_write_idx == 3){
+            //sem_acquire_blocking(&led_frame_sem);
+            //critical_section_enter_blocking(&c_s);
+            if(rgb_buf_write_idx == 2){
                 rgb_buf_write_idx = 0; 
             }else{
                 rgb_buf_write_idx ++;
             }
-            /*if(rgb_buf_write_idx == 0){
-                rgb_buf_read_idx = 3;
-            }else{
-                rgb_buf_read_idx = rgb_buf_write_idx - 1;
-            }*/
-        } 
-        //printf("got color buf\n");
-        memcpy((led_rgb_buf[rgb_buf_write_idx][panel_id]), buf + 4, len - 4 );
-        data_offset += len-4;
-        if( res == 7){
-#if WITH_CRITICAL_SECTION
-            critical_section_enter_blocking(&c_s);
-#endif
             if(rgb_buf_write_idx == 0){
-                rgb_buf_read_idx = 3;
+                rgb_buf_read_idx = 2;
             }else{
                 rgb_buf_read_idx = rgb_buf_write_idx - 1;
             }
-            force_refresh += 1;
-#if WITH_CRITICAL_SECTION
-            critical_section_exit(&c_s);
-#endif
+            force_refresh = 1;
+            //sem_release(&led_frame_sem);
+            //critical_section_exit(&c_s);
         } 
+        //printf("got color buf\n");
+        memcpy((led_rgb_buf[rgb_buf_write_idx][panel_id]), buf + 4, len - 4 );
+        data_offset += len-4; 
     }else{
         //printf("buf : %s!\n", buf);
     }
@@ -913,14 +900,13 @@ int main(void) {
     pio_initial();
 
     //test over clocking
-    vreg_set_voltage(VREG_VOLTAGE_1_20);
+    //vreg_set_voltage(VREG_VOLTAGE_1_20);
     //sleep_ms(1000);
-    set_sys_clock_khz(2500000, false);
+    //set_sys_clock_khz(2500000, false);
 
+    //sem_init(&led_frame_sem, 1, 1);
+    //critical_section_init(&c_s);
 
-#if WITH_CRITICAL_SECTION
-    critical_section_init(&c_s);
-#endif
 
 
 #if 0 //marked gpio irq function
@@ -998,26 +984,21 @@ int main(void) {
     while (1) {
         //tight_loop_contents(); //marked this busy loop
 	    //test pattern
-#if 1        
         int output = 0;
-        critical_section_enter_blocking(&c_s);
+        //critical_section_enter_blocking(&c_s);
         if((b_color_test_mode == true)||(b_rgb_test_mode == true)){
             output = 1;
         }else{
             output = force_refresh;
         }
-        critical_section_exit(&c_s);
+        //critical_section_exit(&c_s);
         if(output == 0){
+	        //sleep_ms(3);
+            //critical_section_exit(&c_s);
             continue;
-        } 
+        }else{
         
-#else
-        int output = force_refresh;
-        printf("output = %d\n", output);
-        if(output == 1){
-           
-        
-#endif
+        }
 	    for(int j = 0; j < LED_HEIGHT; j++){
 	        for(int k = 0; k < LED_WIDTH; k++){
                     for(n = 0; n < LED_PANEL_COUNT; n ++){
@@ -1046,21 +1027,49 @@ int main(void) {
 	        }
 	    }
         //sem_release(&led_frame_sem);
-#if WITH_CRITICAL_SECTION
-        critical_section_enter_blocking(&c_s);
-#endif
-        if(force_refresh == 1){
-            force_refresh = 0;
-        }else{
-            force_refresh --;
-        }
-        printf("%d\n", force_refresh);
-#if WITH_CRITICAL_SECTION
-        critical_section_exit(&c_s);
-#endif
+        //critical_section_enter_blocking(&c_s);
+        force_refresh = 0;
+        //critical_section_exit(&c_s);
         //printf("Apattern : 0x%x\n", pattern);             
 	    sleep_ms(1);
-        //}
+#if 0
+        if(b_rgb_test_mode == 0){
+            continue;
+        }else{
+            sleep_ms(3000);
+            test_pattern_idx ++;
+            if(test_pattern_idx > blue_pattern){
+                test_pattern_idx = white_pattern;
+            }
+            if(test_pattern_idx == white_pattern){
+                r_value = 0x00ff;
+                g_value = 0x00ff;
+                b_value = 0x00ff;
+            }else if(test_pattern_idx == red_pattern){
+                r_value = 0x00ff;
+                g_value = 0x0000;
+                b_value = 0x0000; 
+            }else if(test_pattern_idx == green_pattern){
+                r_value = 0x0000;
+                g_value = 0x00ff;
+                b_value = 0x0000; 
+            }else if(test_pattern_idx == blue_pattern){
+                r_value = 0x0000;
+                g_value = 0x0000;
+                b_value = 0x00ff; 
+            }
+            color_msb = ((g_value & 0x0000ffff) << 8) | ((b_value >> 8) & 0x0000ffff);
+            color_lsb = ((b_value & 0x000000ff) << 16) | r_value;
+	        for(int j = 0; j < LED_HEIGHT; j++){
+	            for(int k = 0; k < LED_WIDTH; k++){
+                    for(n = 0; n < LED_PANEL_COUNT; n ++){
+                        put_pixel_by_panel_64bits(n, color_msb, color_lsb);
+                    }
+                }
+            }
+            
+        }
+#endif
     }
     return 0;
 }
